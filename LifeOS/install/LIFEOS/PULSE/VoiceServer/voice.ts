@@ -440,7 +440,17 @@ function enqueuePlayback(task: () => Promise<void>): Promise<void> {
   return next
 }
 
-async function playAudio(audioBuffer: ArrayBuffer, volume: number = FALLBACK_VOLUME): Promise<void> {
+// `format` picks the temp file's extension so afplay/ffplay parse the bytes with the
+// right decoder instead of guessing from a mismatched name. ElevenLabs always returns
+// MP3 (the default, unchanged for that path); the local `say` engine returns AIFF —
+// found via a real /notify call during requirement-5 testing: afplay's MP3 parser
+// failed ("Problem scanning for packets") on a `.mp3`-named file that was actually
+// AIFF-C, because it had always been getting real MP3 bytes until now.
+async function playAudio(
+  audioBuffer: ArrayBuffer,
+  volume: number = FALLBACK_VOLUME,
+  format: "mp3" | "aiff" = "mp3",
+): Promise<void> {
   const player = resolveAudioPlayer()
   if (!player) {
     const tried = process.platform === "darwin" ? "afplay" : "ffplay/mpg123/paplay/aplay"
@@ -448,7 +458,7 @@ async function playAudio(audioBuffer: ArrayBuffer, volume: number = FALLBACK_VOL
     return
   }
 
-  const tempFile = `/tmp/voice-${Date.now()}.mp3`
+  const tempFile = `/tmp/voice-${Date.now()}.${format}`
   await Bun.write(tempFile, audioBuffer)
 
   return new Promise((resolve, reject) => {
@@ -616,7 +626,7 @@ async function sendNotification(
       log("info", "Voice: generating speech (local engine — no ElevenLabs API key configured)")
 
       const audioBuffer = await generateLocalSpeech(safeMessage)
-      await enqueuePlayback(() => playAudio(audioBuffer, resolvedVolume))
+      await enqueuePlayback(() => playAudio(audioBuffer, resolvedVolume, "aiff"))
       voicePlayed = true
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : String(error)
