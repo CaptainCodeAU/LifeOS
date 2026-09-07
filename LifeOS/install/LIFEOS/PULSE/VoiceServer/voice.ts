@@ -19,6 +19,7 @@ import { existsSync, readFileSync, rmSync } from "fs"
 import { log } from "../lib"
 import { disambiguateHomographs } from "../lib/homographs"
 import { homedir } from "node:os";
+import { generateLocalSpeech, localSayAvailable } from "./gk-localSay"
 
 // ── Public Config Interface ──
 
@@ -142,7 +143,11 @@ const EMOJI_TO_EMOTION: Record<string, string> = {
 // ── Rate Limiting ──
 
 const requestCounts = new Map<string, { count: number; resetTime: number }>()
-const RATE_LIMIT = 10
+// Requirement 4 (never drop a notification): a busy agent session can legitimately
+// fire more than 10 voice calls/minute (every tool completion, sub-agent finish,
+// etc.). Raised well above real usage; still a ceiling against a genuine runaway
+// loop, not a hard cap on normal operation.
+const RATE_LIMIT = 300
 const RATE_WINDOW = 60_000
 
 function checkRateLimit(ip: string): boolean {
@@ -528,6 +533,10 @@ async function sendNotification(
   let voicePlayed = false
   let voiceError: string | undefined
 
+  // Requirement 5 (free local engine as default, paid path off): the branch
+  // below is the one hook into this function's own logic — the engine
+  // itself lives entirely in the new gk-localSay.ts, so this diff stays
+  // small even though upstream churns this file (36% per release).
   if (voiceEnabled && moduleConfig.elevenlabs_api_key) {
     try {
       const voice = voiceId || defaultVoiceId
@@ -592,6 +601,26 @@ async function sendNotification(
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : String(error)
       log("error", "Voice: failed to generate/play speech", { error: msg })
+      voiceError = msg
+    }
+  } else if (voiceEnabled && localSayAvailable()) {
+    // No ElevenLabs key configured — the paid path is off. Fall back to the
+    // free local engine instead of going silent. No emotional-preset/voice-
+    // settings resolution here (that shape is ElevenLabs-specific); just the
+    // volume, which settings.json's voice entries carry regardless of engine.
+    try {
+      const voice = voiceId || defaultVoiceId
+      const voiceEntry = voiceConfig.voicesByVoiceId[voice] || voiceConfig.voices.main
+      const resolvedVolume = callerVolume ?? voiceEntry?.volume ?? FALLBACK_VOLUME
+
+      log("info", "Voice: generating speech (local engine — no ElevenLabs API key configured)")
+
+      const audioBuffer = await generateLocalSpeech(safeMessage)
+      await enqueuePlayback(() => playAudio(audioBuffer, resolvedVolume))
+      voicePlayed = true
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : String(error)
+      log("error", "Voice: failed to generate/play local speech", { error: msg })
       voiceError = msg
     }
   }

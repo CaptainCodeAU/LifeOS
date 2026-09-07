@@ -57,7 +57,11 @@ export function isValidVoiceCompletion(text: string): boolean {
 }
 
 export function getVoiceFallback(): string {
-  return ''; // Intentionally empty — invalid voice completions should be skipped, not spoken
+  // Requirement 6 (always say something): silence on an invalid completion reads as
+  // "nothing happened," not "something happened and needs a look." "Done." is
+  // exactly 5 characters — VoiceNotification.ts drops anything under 5, so this is
+  // the shortest fallback that actually survives that gate.
+  return 'Done.';
 }
 
 // ─── Tab Title Validation ───────────────────────────────────────

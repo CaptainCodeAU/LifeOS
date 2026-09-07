@@ -15,6 +15,7 @@ import { paiPath } from '../lib/paths';
 import { getIdentity, type VoicePersonality } from '../lib/identity';
 import { getISOTimestamp } from '../lib/time';
 import { isValidVoiceCompletion, getVoiceFallback } from '../lib/output-validators';
+import { playMalformedChime } from '../lib/gk-chime';
 import { findActiveSessionByUUID } from '../lib/isa-utils';
 
 import type { ParsedTranscript } from '../../LIFEOS/TOOLS/TranscriptParser';
@@ -150,6 +151,7 @@ export async function handleVoice(parsed: ParsedTranscript, sessionId: string): 
   if (!isValidVoiceCompletion(voiceCompletion)) {
     console.error(`[Voice] Invalid completion: "${voiceCompletion.slice(0, 50)}..."`);
     voiceCompletion = getVoiceFallback();
+    playMalformedChime(); // requirement 7: audibly distinct from a normal response
   }
 
   // Skip empty or too-short messages
