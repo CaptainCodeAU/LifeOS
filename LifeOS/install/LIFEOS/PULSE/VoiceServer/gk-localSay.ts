@@ -59,10 +59,10 @@ import { homedir } from "node:os"
 // beat neuralAX for Aaron: it is Apple's full Spoken Content build rather than
 // the smaller VoiceOver build, and carries the better prosody that comes with it.
 const DEFAULT_SAY2_VOICE = "en-US:natural:female:Simone:premium:5029"
-// Chosen against a dense technical sentence (timestamp, commit hash, ratio,
-// product name). Above ~500 the gains flatten: each further 50 wpm buys about
-// two tenths of a second while compressing the pacing this voice was picked for.
-const DEFAULT_SAY2_RATE_WPM = 500
+// 500 was chosen against a dense technical sentence (timestamp, commit hash,
+// ratio, product name) for Aaron. Reduced to 450 on 2026-09-09 after switching
+// the default voice to Simone — Gavin's call by ear, 500 felt too fast on her.
+const DEFAULT_SAY2_RATE_WPM = 450
 // say2 exits 69 when the private Siri framework is gone — permanent, not
 // transient. We fall back on ANY say2 failure, but this code is logged
 // distinctly because it means "stop expecting say2 to work until it's updated".
