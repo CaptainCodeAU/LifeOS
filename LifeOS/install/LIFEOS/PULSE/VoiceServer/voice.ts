@@ -449,7 +449,9 @@ function enqueuePlayback(task: () => Promise<void>): Promise<void> {
 async function playAudio(
   audioBuffer: ArrayBuffer,
   volume: number = FALLBACK_VOLUME,
-  format: "mp3" | "aiff" = "mp3",
+  // "wav" added 2026-09-08 for the say2 local engine. afplay picks its parser
+  // from the temp file's EXTENSION, so a mismatch here fails playback outright.
+  format: "mp3" | "aiff" | "wav" = "mp3",
 ): Promise<void> {
   const player = resolveAudioPlayer()
   if (!player) {
@@ -625,8 +627,12 @@ async function sendNotification(
 
       log("info", "Voice: generating speech (local engine — no ElevenLabs API key configured)")
 
-      const audioBuffer = await generateLocalSpeech(safeMessage)
-      await enqueuePlayback(() => playAudio(audioBuffer, resolvedVolume, "aiff"))
+      // The engine reports its own container format — say2 renders wav, `say`
+      // renders aiff, and the fallback can switch between them at runtime. Never
+      // hardcode the extension here.
+      const { audio, format, engine } = await generateLocalSpeech(safeMessage)
+      log("info", `Voice: rendered by ${engine}`, { format })
+      await enqueuePlayback(() => playAudio(audio, resolvedVolume, format))
       voicePlayed = true
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : String(error)
