@@ -52,12 +52,13 @@ import { homedir } from "node:os"
 
 // ── say2 (preferred) ──
 
-// The asset behind this Mac's "Siri (Voice 1)" system voice
-// (com.apple.siri.natural.Aaron). Chosen by ear over the neuralAX variant: both
-// carry identical frequency content, but `natural` places pauses and stress
-// differently and takes 31% longer to say the same sentence. That prosody is
-// the whole reason to prefer it.
-const DEFAULT_SAY2_VOICE = "en-US:natural:male:Aaron:premium:5030"
+// The asset behind this Mac's "Siri (Voice 2)" system voice
+// (com.apple.siri.natural.Simone). Set as default 2026-09-09, replacing Aaron
+// (en-US:natural:male:Aaron:premium:5030, still installed — see `say2 voices`).
+// Same "natural" premium tier as Aaron, chosen for the same reason that tier
+// beat neuralAX for Aaron: it is Apple's full Spoken Content build rather than
+// the smaller VoiceOver build, and carries the better prosody that comes with it.
+const DEFAULT_SAY2_VOICE = "en-US:natural:female:Simone:premium:5029"
 // Chosen against a dense technical sentence (timestamp, commit hash, ratio,
 // product name). Above ~500 the gains flatten: each further 50 wpm buys about
 // two tenths of a second while compressing the pacing this voice was picked for.
