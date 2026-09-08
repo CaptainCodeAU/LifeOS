@@ -19,7 +19,7 @@ import { existsSync, readFileSync, rmSync } from "fs"
 import { log } from "../lib"
 import { disambiguateHomographs } from "../lib/homographs"
 import { homedir } from "node:os";
-import { generateLocalSpeech, localSayAvailable } from "./gk-localSay"
+import { generateLocalSpeech, localSayAvailable, getLocalEngineVolume } from "./gk-localSay"
 
 // ── Public Config Interface ──
 
@@ -623,7 +623,10 @@ async function sendNotification(
     try {
       const voice = voiceId || defaultVoiceId
       const voiceEntry = voiceConfig.voicesByVoiceId[voice] || voiceConfig.voices.main
-      const resolvedVolume = callerVolume ?? voiceEntry?.volume ?? FALLBACK_VOLUME
+      // No daidentity entry exists on this install (voiceEntry is always
+      // undefined), so the local engine's own volume.localEngine.volume
+      // (gk-localSay.ts, default 0.5) is what actually applies in practice.
+      const resolvedVolume = callerVolume ?? voiceEntry?.volume ?? getLocalEngineVolume() ?? FALLBACK_VOLUME
 
       log("info", "Voice: generating speech (local engine — no ElevenLabs API key configured)")
 

@@ -76,6 +76,11 @@ const DEFAULT_SAY_RATE_WPM = 450
 // smallest value that reliably yields a real pad. Set to 0 to disable.
 const DEFAULT_SAY_WARMUP_SILENCE_MS = 400
 
+// Chosen by ear on this machine on 2026-09-08 (OPEN-ITEMS.md). Applied at
+// playback via `afplay -v`, not at synthesis — say2's own --volume flag is a
+// no-op on the siri engine.
+const DEFAULT_VOLUME = 0.5
+
 export type LocalAudioFormat = "wav" | "aiff"
 
 export interface LocalSpeechResult {
@@ -95,6 +100,10 @@ interface LocalEngineConfig {
   sayWarmupSilenceMs: number
   /** Set false to skip say2 entirely and use `say`. Escape hatch. */
   preferSay2: boolean
+  /** Applied at playback via `afplay -v`, regardless of which engine rendered
+   *  the audio — neither say2's nor `say`'s own volume controls are reliable
+   *  (see the module doc). */
+  volume: number
 }
 
 let cachedConfig: LocalEngineConfig | undefined = undefined
@@ -109,6 +118,7 @@ function loadLocalEngineConfig(): LocalEngineConfig {
     sayRateWpm: DEFAULT_SAY_RATE_WPM,
     sayWarmupSilenceMs: DEFAULT_SAY_WARMUP_SILENCE_MS,
     preferSay2: true,
+    volume: DEFAULT_VOLUME,
   }
 
   try {
@@ -130,11 +140,19 @@ function loadLocalEngineConfig(): LocalEngineConfig {
       sayRateWpm: num(cfg.sayRateWpm ?? cfg.rateWpm, fallback.sayRateWpm),
       sayWarmupSilenceMs: num(cfg.sayWarmupSilenceMs ?? cfg.warmupSilenceMs, fallback.sayWarmupSilenceMs),
       preferSay2: cfg.preferSay2 !== false,
+      volume: num(cfg.volume, fallback.volume),
     }
   } catch {
     cachedConfig = fallback
   }
   return cachedConfig
+}
+
+/** The volume to play local-engine audio at, resolved from `voice.localEngine.volume`
+ *  in settings.json (default 0.5). voice.ts reads this as a fallback below any
+ *  per-request override or a real ElevenLabs voice entry. */
+export function getLocalEngineVolume(): number {
+  return loadLocalEngineConfig().volume
 }
 
 // ── availability ──
